@@ -5,7 +5,7 @@ from models import db, User, Profile
 import json
 
 app = Flask(__name__)
-app.url_map.slashes = False
+app.url_map.slashes = False # evita que se generen errores al poner un slash alfinal de la url
 app.config['DEBUG'] = True
 app.config['ENV'] = 'development'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -25,12 +25,14 @@ CORS(app)  # evita que de error CORS y no bloquee las peticiones a esta url, pue
 @app.route("/")
 def main():
     return render_template('index.html')
+    # render_template permite renderizar un archivo html 
 
 
 @app.route("/api/users", methods=['GET'])
 def get_users():
-    users = User.query.all()
-    users = list(map(lambda user: user.serialize_with_profile(), users))
+    users = User.query.all()  # devuelve <User 1>, <user 2>, <User 3>,... | lista de objetos python
+    users = list(map(lambda user: user.serialize_with_profile(), users)) # [{"id":1, ...},{"id":2,...}, {"id":3,...}] | lista de diccionario python
+    # transforma el array para poder leer y manipular la informacion como objeto y poder acceder a la informacion dentro de cada user
     return jsonify(users), 200
 
 
@@ -93,11 +95,13 @@ def add_new_user():
     newUser.profile = profile  # usando el relationship creado
     newUser.save()
 
-    return jsonify(newUser.serialize_with_profile()), 201
+    return jsonify(newUser.serialize_with_profile()), 201.  # jsonify devuelve los datos de la variable en un string
 
 
 @app.route("/api/users/<int:id>", methods=['PUT'])  # la url necesita un parametro para encontrar el usuario a modificar
 def put_users(id):
+    """
+    # update por separado
     name = request.json.get('name')
     lastname = request.json.get('lastname')
     email = request.json.get('email')
@@ -109,7 +113,35 @@ def put_users(id):
     user.password = password
     user.update()
 
-    return jsonify(user.serialize()), 200
+
+    profile = profile.query.filter_by(user_id=user.id).first()
+    profile.bio = bio
+    profile.twitter = twitter
+    profile.facebook = facebook
+    profile.instagram = instagram
+    profile.linkedin = linkedin
+    profile.update()
+    """
+
+    # update con relationship
+    name = request.json.get('name')
+    lastname = request.json.get('lastname')
+    email = request.json.get('email')
+    password = request.json.get('password')
+    user = User.query.get(id)
+    user.name = name
+    user.lastname = lastname
+    user.email = email
+    user.password = password 
+    user.profile.bio = bio
+    user.profile.twitter = twitter
+    user.profile.facebook = facebook
+    user.profile.instagram = instagram
+    user.profile.linkedin = linkedin
+    
+    user.update()
+
+    return jsonify(user.serialize_with_profile()), 200
 
 
 
